@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
             TaskProTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Greeting(
-                        name = "Welcome to TaskPro",
+                        name = "Task Pro",
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
