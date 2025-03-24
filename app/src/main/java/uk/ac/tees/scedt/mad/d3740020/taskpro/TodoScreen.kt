@@ -1,5 +1,8 @@
 package uk.ac.tees.scedt.mad.d3740020.taskpro
 
+import android.content.ContentValues.TAG
+import android.nfc.Tag
+import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,12 +33,36 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.google.firebase.Firebase
+import com.google.firebase.firestore.firestore
 import uk.ac.tees.scedt.mad.d3740020.taskpro.util.TodoItem
 
 @Composable
 fun TodoScreen(modifier: Modifier = Modifier, navController: NavHostController) {
+
+    val db = Firebase.firestore
+    val todoCollection = db.collection("todos")
+
     var todoList by remember { mutableStateOf(listOf<TodoItem>()) }
     var newTodo by remember { mutableStateOf(TextFieldValue()) }
+
+    LaunchedEffect(Unit) {
+        todoCollection.addSnapshotListener{snapshot, e ->
+            if (e != null) {
+                Log.w(TAG, "Listen failed.", e)
+                return@addSnapshotListener
+            }
+
+            val tasks = snapshot?.documents?.map {
+                document -> TodoItem(id = document.id, text = document.data?.get("text") as String, completed = document.data?.get("completed") as Boolean)
+            } ?: listOf()
+            todoList = tasks
+        }
+    }
+
+// Add a new document with a generated ID
+
+
 
     Column(modifier = Modifier.padding(16.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -50,13 +78,16 @@ fun TodoScreen(modifier: Modifier = Modifier, navController: NavHostController) 
             }
             Button(onClick = {
                 if (newTodo.text.isNotBlank()) {
-                    todoList = todoList + TodoItem(newTodo.text)
+                    val newTask = hashMapOf("text" to newTodo.text, "completed" to false)
+                    todoCollection.add(newTask)
                     newTodo = TextFieldValue("")
                 }
             }) {
                 Text("Add")
             }
         }
+
+
         Spacer(modifier = Modifier.height(16.dp))
         TodoList(todoList, onToggleComplete = { index ->
             todoList = todoList.mapIndexed { i, item ->
